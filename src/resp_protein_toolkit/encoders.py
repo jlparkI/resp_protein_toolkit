@@ -1,9 +1,9 @@
 """Contains Python wrapper code for the main encoders."""
 import os
 import numpy as np
-from cpp_protein_encoders.cpp_protein_encoders_ext import get_max_length, onehot_flat_encode_list, onehot_3d_encode_list
-from cpp_protein_encoders.cpp_protein_encoders_ext import subsmat_flat_encode_list, subsmat_3d_encode_list
-from cpp_protein_encoders.cpp_protein_encoders_ext import integer_encode_list
+from resp_protein_toolkit.resp_protein_toolkit_ext import get_max_length, onehot_flat_encode_list, onehot_3d_encode_list
+from resp_protein_toolkit.resp_protein_toolkit_ext import subsmat_flat_encode_list, subsmat_3d_encode_list
+from resp_protein_toolkit.resp_protein_toolkit_ext import integer_encode_list
 
 
 

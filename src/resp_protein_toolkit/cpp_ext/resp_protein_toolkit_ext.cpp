@@ -15,7 +15,7 @@
 
 namespace nb = nanobind;
 
-NB_MODULE(cpp_protein_encoders_ext, m){
+NB_MODULE(resp_protein_toolkit_ext, m){
     m.def("get_max_length", &get_max_length);
     m.def("onehot_flat_encode_list", &onehot_flat_encode_list,
             nb::arg("sequenceList"), nb::arg("outputArray").noconvert(),
