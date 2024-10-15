@@ -3,22 +3,21 @@ requires = ["scikit-build-core >=0.4.3", "numpy", "nanobind >=1.3.2"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "cpp_protein_encoders"
+name = "resp_protein_toolkit"
 version = "0.0.1"
-description = "Fast Python-wrapped C++ basic encoders for protein sequences"
+description = "Basic toolkit for common protein engineering tasks"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
     { name = "Jonathan Parkinson", email = "jlparkinson1@gmail.com" },
 ]
 license = {file = "LICENSE"}
-keywords = ["tokenizer", "protein tokenizer", "fast protein tokenizer",
-"protein encoder", "fast protein encoder"]
+keywords = ["RESP", "protein_engineering"]
 
 
 [project.urls]
-Homepage = "https://github.com/jlparki/cpp_protein_tokenizers"
-Documentation = "https://github.com/jlparki/cpp_protein_tokenizers"
+Homepage = "https://github.com/jlparki/resp_protein_toolkit"
+Documentation = "https://github.com/jlparki/resp_protein_toolkit"
 
 
 [tool.scikit-build]

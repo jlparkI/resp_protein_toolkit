@@ -24,10 +24,10 @@ nanobind_add_module(
 
   NB_STATIC
 
-  cpp_protein_encoders/cpp_ext/basic_encoders.cpp
-  cpp_protein_encoders/cpp_ext/cpp_protein_encoders_ext.cpp
-  cpp_protein_encoders/cpp_ext/subsmat_tokenizer.cpp
-  cpp_protein_encoders/cpp_ext/utilities.cpp
+  src/resp_protein_toolkit/cpp_ext/basic_encoders.cpp
+  src/resp_protein_toolkit/cpp_ext/cpp_protein_encoders_ext.cpp
+  src/resp_protein_toolkit/cpp_ext/subsmat_tokenizer.cpp
+  src/resp_protein_toolkit/cpp_ext/utilities.cpp
 
 )
 

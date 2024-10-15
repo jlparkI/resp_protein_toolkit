@@ -64,9 +64,30 @@ class InSilicoDirectedEvolution():
         self.acceptance_rate = 0
 
 
+    def get_scores(self):
+        """Convenience function for retrieving the scores from
+        a run."""
+        return self.scores
+
+    def get_accepted_seqs(self):
+        """Convenience function for retrieving the accepted
+        sequences from a run."""
+        return self.accepted_seqs
+
+    def get_uncertainty(self):
+        """Convenience function for retrieving the uncertainty
+        values from a run."""
+        return self.uncertainty
 
 
-    def calc_transition_prob(self, proposed_seq:list, temperature:float,
+    def get_acceptance_rate(self):
+        """Convenience function for retrieving the acceptance
+        rate from a completed run."""
+        return self.acceptance_rate
+
+
+
+    def _calc_transition_prob(self, proposed_seq:list, temperature:float,
             current_scores):
         """Scores a proposed sequence and calculates the transition
         probability according to an update rule.
@@ -122,6 +143,13 @@ class InSilicoDirectedEvolution():
                 in a row, terminate the evolution process.
             starting_temp (float): The starting temperature for the algorithm.
         """
+        # The accepted sequences, uncertainties and scores generated
+        # by this chain. Initialized to empty.
+        self.accepted_seqs = []
+        self.scores = []
+        self.uncertainty = []
+        self.acceptance_rate = 0
+
         num_accepted = 0
         random.seed(self.seed)
         rng = np.random.default_rng(self.seed)
@@ -164,7 +192,7 @@ class InSilicoDirectedEvolution():
             proposed_seq[chosen_one] = new_aa
 
             acceptance_prob, new_scores, new_uncertainties = \
-                    self.calc_transition_prob(proposed_seq, temp,
+                    self._calc_transition_prob(proposed_seq, temp,
                     current_scores)
             runif = np.random.uniform()
 

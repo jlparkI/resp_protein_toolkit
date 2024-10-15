@@ -14,6 +14,12 @@ model training, please [see this repo.](https://github.com/Wang-lab-UCSD/RESP)
 ```
 pip install resp_protein_toolkit
 ```
+Alternatively, to install from github, clone this repo, then
+from inside the resulting directory run:
+```
+pip install . --verbose
+```
+
 
 ### Usage
 

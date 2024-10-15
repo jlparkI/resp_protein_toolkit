@@ -1,3 +1,4 @@
 from .encoders import OneHotProteinEncoder
 from .encoders import IntegerProteinEncoder
 from .encoders import SubstitutionMatrixEncoder
+from .directed_evolution.directed_evolution import InSilicoDirectedEvolution
