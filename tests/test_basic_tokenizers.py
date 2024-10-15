@@ -1,10 +1,9 @@
 """Tests basic functionality for one hot, integer and substitution
 matrix with PFAsum encoding."""
-import os
 import random
 import unittest
 import numpy as np
-from cpp_protein_encoders import OneHotProteinEncoder, IntegerProteinEncoder, SubstitutionMatrixEncoder
+from resp_protein_toolkit import OneHotProteinEncoder, IntegerProteinEncoder, SubstitutionMatrixEncoder
 
 
 
