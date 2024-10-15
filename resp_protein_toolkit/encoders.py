@@ -215,11 +215,15 @@ class SubstitutionMatrixEncoder():
 
         Args:
             sequence_list (list): A list of sequences.
-            all_same_length (bool): If True, the sequences are expected to
-                be all the same length; if they are not there is an exception.
-                If False, sequences are zero-padded to be the same length.
             flatten_output_array (bool): If True, a 2d flattened array is
                 returned, otherwise a 3d array as discussed above.
+            max_length: Either None or an int. If None, the sequence length
+                is determined based on the longest sequence present in the
+                input list and sequences are zero-padded to that size if
+                necessary. If an int, sequences are zero-padded to be the
+                size of max_length (unless they already are that length).
+                Note that specifying max_length and then passing in sequences
+                longer than that will cause an exception.
 
         Returns:
             encoded_seqs (np.ndarray): A numpy array of shape N x (M * 21)
