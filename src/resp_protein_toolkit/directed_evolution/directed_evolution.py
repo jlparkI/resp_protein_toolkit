@@ -17,7 +17,7 @@ import numpy as np
 
 class InSilicoDirectedEvolution():
 
-    def __init__(self, model_object, uncertainty_threshold:float,
+    def __init__(self, model_object, uncertainty_threshold,
             prob_distro = None, seed:int = 123):
         """Class constructor.
 
@@ -32,8 +32,10 @@ class InSilicoDirectedEvolution():
                         uncertainty on those scores.
                 The model_object will usually contain a trained model and
                 a sequence encoder as attributes.
-            uncertainty_threshold (float): The maximum allowed uncertainty
-                on a prediction before a sequence is rejected. This value is
+            uncertainty_threshold: The maximum allowed uncertainty
+                on a prediction before a sequence is rejected. This should be an
+                array of the same length as the number of antigens if there are
+                multiple antigens OR a float if there is only one. This value is
                 dataset- and model-dependent. We recommend using your trained
                 model to calculate uncertainty for the training set datapoints
                 then taking the 95th percentile and using this as the threshold
@@ -108,8 +110,13 @@ class InSilicoDirectedEvolution():
 
         elif isinstance(new_scores, np.ndarray) and isinstance(new_uncertainties,
                 np.ndarray):
-            if new_uncertainties.max() > self.uncertainty_threshold:
-                return -1, new_scores, new_uncertainties
+            if self.uncertainty_threshold.shape[0] != new_uncertainties.shape[0]:
+                raise RuntimeError("The number of uncertainty thresholds must "
+                        "match the number of uncertainties for each datapoint.")
+            for new_uncertainty, threshold in zip(new_uncertainties.tolist(),
+                    self.uncertainty_threshold.tolist()):
+                if new_uncertainty > threshold:
+                    return -1, new_scores, new_uncertainties
 
             probs = np.exp( ((new_scores - current_scores) /
                 temperature).max().clip(max=0) )
