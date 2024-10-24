@@ -9,158 +9,41 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.nn.utils import spectral_norm as SpectralNorm
-from uncertaintyAwareDeepLearn import VanillaRFFLayer
-
-
-class ConvLayer(torch.nn.Conv1d):
-    """ A 1-dimensional convolution layer.
-
-    Takes the same arguments as torch.nn.Conv1D, but applies automatic padding
-    for convenience, and automatically performs transposition on inputs.
-
-    
-    """
-
-    def __init__(self, in_channels: int, out_channels: int,
-                 kernel_size: int, stride: int=1, dilation: int=1, groups: int=1,
-                 bias: bool=True):
-        """Class constructor.
-
-        Args:
-            param in_channels: input channels
-            param out_channels: output channels
-            param kernel_size: the kernel width
-            param stride: filter shift
-            param dilation: dilation factor
-            param groups: perform depth-wise convolutions
-            param bias: adds learnable bias to output
-        """
-        padding = dilation * (kernel_size - 1) // 2
-        super().__init__(in_channels, out_channels, kernel_size,
-                                            stride=stride, dilation=dilation,
-                                            groups=groups, bias=bias, padding=padding)
-
-    def forward(self, xdata):
-        """Standard forward pass.
-        Args:
-            Input: (N, L, in_channels)
-        Returns:
-            Output: (N, L, out_channels)
-        """
-        return super().forward(xdata.transpose(1, 2)).transpose(1, 2)
+from ..classic_rffs import VanillaRFFLayer
+from .bytenet_antibody_only import ConvLayer, PositionFeedForward, ByteNetBlock
 
 
 
-class PositionFeedForward(torch.nn.Module):
-    """A feed-forward layer for the bytenet block.
-
-    Args:
-        d_in: The input dimensionality.
-        d_out: The output dimensionality.
-        use_spectral_norm (bool): If True, use spectral norm on the weights.
-    """
-
-    def __init__(self, d_in, d_out, use_spectral_norm = False):
-        super().__init__()
-        if use_spectral_norm:
-            self.conv = SpectralNorm(torch.nn.Conv1d(d_in, d_out, 1))
-        else:
-            self.conv = torch.nn.Conv1d(d_in, d_out, 1)
-        self.factorized = False
 
 
-    def forward(self, xdata):
-        """The forward pass.
-
-        Args:
-            Input: (N, L, in_channels)
-        Returns:
-            Output: (N, L, out_channels)
-        """
-        return self.conv(xdata.transpose(1, 2)).transpose(1, 2)
-
-
-
-class ByteNetBlock(torch.nn.Module):
-    """Residual block from ByteNet paper (https://arxiv.org/abs/1610.10099).
-
-    Args:
-        d_in (int): the input dimensionality
-        d_h (int): The within-block hidden dimensionality
-        d_out (int): The output dimensionality
-        kernel_size (int): the size of the convolution kernel
-        dilation (int): The convolution kernel dilation
-        groups (int): depth-wise convolutions (if desired)
-        use_spectral_norm (bool): If True, use spectral norm on the weights.
-    """
-
-    def __init__(self, d_in, d_h, d_out, kernel_size, dilation=1, groups=1,
-                 use_spectral_norm = False):
-        super().__init__()
-        if use_spectral_norm:
-            self.conv = SpectralNorm(ConvLayer(d_h, d_h, kernel_size=kernel_size,
-                                           dilation=dilation, groups=groups))
-        else:
-            self.conv = ConvLayer(d_h, d_h, kernel_size=kernel_size,
-                                           dilation=dilation, groups=groups)
-
-        layers1 = [
-            torch.nn.LayerNorm(d_in),
-            torch.nn.GELU(),
-            PositionFeedForward(d_in, d_h, use_spectral_norm),
-            torch.nn.LayerNorm(d_h),
-            torch.nn.GELU()
-        ]
-        layers2 = [
-            torch.nn.LayerNorm(d_h),
-            torch.nn.GELU(),
-            PositionFeedForward(d_h, d_out, use_spectral_norm),
-        ]
-        self.sequence1 = torch.nn.Sequential(*layers1)
-        self.sequence2 = torch.nn.Sequential(*layers2)
-
-
-    def forward(self, xdata):
-        """
-        Args:
-            Input: (N, L, in_channels)
-        Returns:
-            Output: (N, L, out_channels)
-        """
-        return xdata + self.sequence2(
-            self.conv(self.sequence1(xdata)))
-
-
-class ByteNetPairedSeqs(torch.nn.Module):
-    """A model for predicting the fitness of a given antibody-
-    antigen pair using a series of ByteNet blocks. Note that it accepts
-    two sets of sequences as input: the antigen sequence and the antibody
-    sequence. Each of these is fed through its own series of ByteNet
-    blocks, then at the end the representations of the two are
-    merged.
+class ByteNetSingleSeq(torch.nn.Module):
+    """A model for predicting the fitness of a given antibody
+    using a series of ByteNet blocks. Note that it makes predictions
+    using a single sequence only, not sequence pairs.
 
     Args:
         input_dim (int): The expected dimensionality of the input, which is
-            (N, L, hidden_dim).
+            (N, L, input_dim).
         hidden_dim (int): The dimensions used inside the model.
         n_layers (int): The number of ByteNet blocks to use.
         kernel_size (int): The kernel width for ByteNet blocks.
         dil_factor (int): Used for calculating dilation factor, which increases on
             subsequent layers.
+        rep_dim (int): At the end of the ByteNet blocks, the mean is taken across
+            the tokens in each sequence to generate a representation. rep_dim
+            determines the size of that representation.
         dropout (float): The level of dropout to apply.
         slim (bool): If True, use a smaller size within each ByteNet block.
         llgp (bool): If True, use a last-layer GP.
-        antigen_dim: Either None or an int. If None, the antigen input is assumed
-            to have the same dimensionality as the antibody.
         objective (str): Must be one of "regression", "binary_classifier",
             "multiclass".
         num_predicted_categories (int): The number of categories (i.e. possible values
             for y in output). Ignored unless objective is "multiclass".
     """
     def __init__(self, input_dim, hidden_dim, n_layers, kernel_size, dil_factor,
-                num_antibody_tokens, num_antigen_tokens, dropout = 0.0, slim = False,
-                 llgp = False, antigen_dim = None, objective = "regression",
-                 num_predicted_categories = 1):
+                rep_dim = 100, dropout = 0.0, slim = False, llgp = False,
+                antigen_dim = None, objective = "regression",
+                num_predicted_categories = 1):
         super().__init__()
         torch.manual_seed(123)
         torch.backends.cudnn.deterministic = True
@@ -216,23 +99,21 @@ class ByteNetPairedSeqs(torch.nn.Module):
         ]
         self.antigen_layers = torch.nn.ModuleList(modules=antigen_layers)
 
-        self.down_adjuster = PositionFeedForward(hidden_dim, 1,
+        self.down_adjuster = PositionFeedForward(hidden_dim, rep_dim,
                                             use_spectral_norm = use_spectral_norm)
-        self.final_lnorm = torch.nn.LayerNorm(num_antibody_tokens + num_antigen_tokens)
+        self.final_lnorm = torch.nn.LayerNorm(2 * rep_dim)
 
 
         if llgp:
-            self.out_layer = VanillaRFFLayer(in_features = num_antibody_tokens + num_antigen_tokens,
+            self.out_layer = VanillaRFFLayer(in_features = 2 * rep_dim,
                         RFFs = 1024, out_targets = 1, gp_cov_momentum = 0.999,
                         gp_ridge_penalty = 1e-3, likelihood = likelihood,
                         random_seed = 123)
         else:
             if use_spectral_norm:
-                self.out_layer = SpectralNorm(torch.nn.Linear(num_antibody_tokens +
-                                                        num_antigen_tokens, nclasses))
+                self.out_layer = SpectralNorm(torch.nn.Linear(2 * rep_dim, nclasses))
             else:
-                self.out_layer = torch.nn.Linear(num_antibody_tokens +
-                                                        num_antigen_tokens, nclasses)
+                self.out_layer = torch.nn.Linear(2 * rep_dim, nclasses)
 
         self.dropout = dropout
         self.llgp = llgp
@@ -277,9 +158,9 @@ class ByteNetPairedSeqs(torch.nn.Module):
 
         x_antibody = self.down_adjuster(x_antibody)
         x_antigen = self.down_adjuster(x_antigen)
+        xdata = torch.cat([x_antibody, x_antigen], dim=2)
+        xdata = self.final_lnorm(torch.mean(xdata, dim=1))
 
-
-        xdata = self.final_lnorm(torch.cat([x_antibody, x_antigen], dim=1).squeeze(2))
         if self.objective == "regression":
             if self.llgp:
                 if get_var:

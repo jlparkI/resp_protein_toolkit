@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.nn.utils import spectral_norm as SpectralNorm
-from uncertaintyAwareDeepLearn import VanillaRFFLayer
+from ..classic_rffs import VanillaRFFLayer
 
 
 class ConvLayer(torch.nn.Conv1d):
@@ -141,12 +141,15 @@ class ByteNetPairedSeqs(torch.nn.Module):
 
     Args:
         input_dim (int): The expected dimensionality of the input, which is
-            (N, L, hidden_dim).
+            (N, L, input_dim).
         hidden_dim (int): The dimensions used inside the model.
         n_layers (int): The number of ByteNet blocks to use.
         kernel_size (int): The kernel width for ByteNet blocks.
         dil_factor (int): Used for calculating dilation factor, which increases on
             subsequent layers.
+        rep_dim (int): At the end of the ByteNet blocks, the mean is taken across
+            the tokens in each sequence to generate a representation. rep_dim
+            determines the size of that representation.
         dropout (float): The level of dropout to apply.
         slim (bool): If True, use a smaller size within each ByteNet block.
         llgp (bool): If True, use a last-layer GP.
@@ -158,9 +161,8 @@ class ByteNetPairedSeqs(torch.nn.Module):
             for y in output). Ignored unless objective is "multiclass".
     """
     def __init__(self, input_dim, hidden_dim, n_layers, kernel_size, dil_factor,
-                num_antibody_tokens, num_antigen_tokens, dropout = 0.0, slim = False,
-                 llgp = False, antigen_dim = None, objective = "regression",
-                 num_predicted_categories = 1):
+                rep_dim = 100, dropout = 0.0, slim = False, llgp = False, antigen_dim = None,
+                objective = "regression", num_predicted_categories = 1):
         super().__init__()
         torch.manual_seed(123)
         torch.backends.cudnn.deterministic = True
@@ -216,34 +218,29 @@ class ByteNetPairedSeqs(torch.nn.Module):
         ]
         self.antigen_layers = torch.nn.ModuleList(modules=antigen_layers)
 
-        self.down_adjuster = PositionFeedForward(hidden_dim, 1,
+        self.down_adjuster = PositionFeedForward(hidden_dim, rep_dim,
                                             use_spectral_norm = use_spectral_norm)
-        self.final_lnorm = torch.nn.LayerNorm(num_antibody_tokens + num_antigen_tokens)
-
+        self.final_lnorm = torch.nn.LayerNorm(rep_dim)
 
         if llgp:
-            self.out_layer = VanillaRFFLayer(in_features = num_antibody_tokens + num_antigen_tokens,
+            self.out_layer = VanillaRFFLayer(in_features = rep_dim,
                         RFFs = 1024, out_targets = 1, gp_cov_momentum = 0.999,
                         gp_ridge_penalty = 1e-3, likelihood = likelihood,
                         random_seed = 123)
         else:
             if use_spectral_norm:
-                self.out_layer = SpectralNorm(torch.nn.Linear(num_antibody_tokens +
-                                                        num_antigen_tokens, nclasses))
+                self.out_layer = SpectralNorm(torch.nn.Linear(rep_dim, nclasses))
             else:
-                self.out_layer = torch.nn.Linear(num_antibody_tokens +
-                                                        num_antigen_tokens, nclasses)
+                self.out_layer = torch.nn.Linear(rep_dim, nclasses)
 
         self.dropout = dropout
         self.llgp = llgp
 
 
-    def forward(self, x_antibody, x_ant,
-                update_precision = False, get_var = False):
+    def forward(self, x_antibody, update_precision = False, get_var = False):
         """
         Args:
             x_antibody (N, L, in_channels): -- the antibody sequence data
-            x_ant (N, L2, in_channels): -- the antigen sequence data
             update_precision (bool): Should be True during training, False
                 otherwise.
             get_var (bool): If True, return estimated variance on predictions.
@@ -261,45 +258,35 @@ class ByteNetPairedSeqs(torch.nn.Module):
                 is a tensor of shape (N).
         """
         x_antibody = self.adjuster(x_antibody)
-        if self.antigen_adjuster is not None:
-            x_antigen = self.antigen_adjuster(x_ant)
-        else:
-            x_antigen = self.adjuster(x_ant)
 
         for layer in self.antibody_layers:
             x_antibody = layer(x_antibody)
             if self.dropout > 0.0 and self.training:
                 x_antibody = F.dropout(x_antibody, self.dropout)
-        for layer in self.antigen_layers:
-            x_antigen = layer(x_antigen)
-            if self.dropout > 0.0 and self.training:
-                x_antigen = F.dropout(x_antigen, self.dropout)
 
         x_antibody = self.down_adjuster(x_antibody)
-        x_antigen = self.down_adjuster(x_antigen)
+        x_antibody = self.final_lnorm(torch.mean(x_antibody, dim=1))
 
-
-        xdata = self.final_lnorm(torch.cat([x_antibody, x_antigen], dim=1).squeeze(2))
         if self.objective == "regression":
             if self.llgp:
                 if get_var:
-                    preds, var = self.out_layer(xdata, get_var = get_var)
+                    preds, var = self.out_layer(x_antibody, get_var = get_var)
                     return preds.squeeze(1), var
-                preds = self.out_layer(xdata, update_precision)
+                preds = self.out_layer(x_antibody, update_precision)
             else:
-                preds = self.out_layer(xdata)
+                preds = self.out_layer(x_antibody)
             return preds.squeeze(1)
         if self.objective == "binary_classifier":
             if self.llgp:
-                preds = self.out_layer(xdata, update_precision)
+                preds = self.out_layer(x_antibody, update_precision)
             else:
-                preds = self.out_layer(xdata)
+                preds = self.out_layer(x_antibody)
             return F.sigmoid(preds.squeeze(1))
         if self.objective == "multiclass":
             if self.llgp:
-                preds = self.out_layer(xdata, update_precision)
+                preds = self.out_layer(x_antibody, update_precision)
             else:
-                preds = self.out_layer(xdata)
+                preds = self.out_layer(x_antibody)
             return F.softmax(preds)
 
         # Double-check that the objective is correct to avoid weird
@@ -310,7 +297,7 @@ class ByteNetPairedSeqs(torch.nn.Module):
 
 
 
-    def predict(self, x, ant, get_var = False):
+    def predict(self, x, get_var = False):
         """This function returns the predicted y-value for each
         datapoint. For convenience, it takes numpy arrays as input
         and returns numpy arrays as output. If you already have
@@ -319,7 +306,6 @@ class ByteNetPairedSeqs(torch.nn.Module):
 
         Args:
             x (np.ndarray): The input antibody data.
-            ant (np.ndarray): the input antigen data.
             get_var (bool): If True, return estimated variance on predictions.
                 Only available if 'llgp' in class constructor is True and the
                 objective in the class constructor is "regression". Otherwise
@@ -337,11 +323,9 @@ class ByteNetPairedSeqs(torch.nn.Module):
         with torch.no_grad():
             self.eval()
             x = torch.from_numpy(x).float()
-            ant = torch.from_numpy(ant).float()
             if next(self.parameters()).is_cuda:
                 x = x.cuda()
-                ant = ant.cuda()
             if self.llgp and get_var and self.objective == "regression":
-                preds, var = self.forward(x, ant, get_var = get_var)
+                preds, var = self.forward(x, get_var = get_var)
                 return preds.cpu().numpy(), var.cpu().numpy()
-            return self.forward(x, ant).cpu().numpy()
+            return self.forward(x).cpu().numpy()
