@@ -10,16 +10,19 @@ import torch
 import torch.nn.functional as F
 from torch.nn.utils import spectral_norm as SpectralNorm
 from ..classic_rffs import VanillaRFFLayer
-from .bytenet_antibody_only import ConvLayer, PositionFeedForward, ByteNetBlock
+from .bytenet_antibody_only import PositionFeedForward, ByteNetBlock
 
 
 
 
 
-class ByteNetSingleSeq(torch.nn.Module):
-    """A model for predicting the fitness of a given antibody
-    using a series of ByteNet blocks. Note that it makes predictions
-    using a single sequence only, not sequence pairs.
+class ByteNetPairedSeqs(torch.nn.Module):
+    """A model for predicting the fitness of a given antibody-
+    antigen pair using a series of ByteNet blocks. Note that it accepts
+    two sets of sequences as input: the antigen sequence and the antibody
+    sequence. Each of these is fed through its own series of ByteNet
+    blocks, then at the end the representations of the two are
+    merged.
 
     Args:
         input_dim (int): The expected dimensionality of the input, which is
@@ -35,6 +38,8 @@ class ByteNetSingleSeq(torch.nn.Module):
         dropout (float): The level of dropout to apply.
         slim (bool): If True, use a smaller size within each ByteNet block.
         llgp (bool): If True, use a last-layer GP.
+        antigen_dim: Either None or an int. If None, the antigen input is assumed
+            to have the same dimensionality as the antibody.
         objective (str): Must be one of "regression", "binary_classifier",
             "multiclass".
         num_predicted_categories (int): The number of categories (i.e. possible values
@@ -101,7 +106,6 @@ class ByteNetSingleSeq(torch.nn.Module):
 
         self.down_adjuster = PositionFeedForward(hidden_dim, rep_dim,
                                             use_spectral_norm = use_spectral_norm)
-        self.final_lnorm = torch.nn.LayerNorm(2 * rep_dim)
 
 
         if llgp:
@@ -159,28 +163,34 @@ class ByteNetSingleSeq(torch.nn.Module):
         x_antibody = self.down_adjuster(x_antibody)
         x_antigen = self.down_adjuster(x_antigen)
         xdata = torch.cat([x_antibody, x_antigen], dim=2)
-        xdata = self.final_lnorm(torch.mean(xdata, dim=1))
+        xdata = torch.mean(xdata, dim=1)
 
         if self.objective == "regression":
             if self.llgp:
                 if get_var:
-                    preds, var = self.out_layer(xdata, get_var = get_var)
+                    preds, var = self.out_layer(x_antibody, get_var = get_var)
                     return preds.squeeze(1), var
-                preds = self.out_layer(xdata, update_precision)
+                preds = self.out_layer(x_antibody, update_precision)
             else:
-                preds = self.out_layer(xdata)
+                preds = self.out_layer(x_antibody)
             return preds.squeeze(1)
         if self.objective == "binary_classifier":
+            if self.llgp and get_var:
+                preds, var = self.out_layer(x_antibody, get_var = get_var)
+                return F.sigmoid(preds.squeeze(1)), var
             if self.llgp:
-                preds = self.out_layer(xdata, update_precision)
+                preds = self.out_layer(x_antibody, update_precision)
             else:
-                preds = self.out_layer(xdata)
+                preds = self.out_layer(x_antibody)
             return F.sigmoid(preds.squeeze(1))
         if self.objective == "multiclass":
+            if self.llgp and get_var:
+                preds, var = self.out_layer(x_antibody, get_var = get_var)
+                return F.softmax(preds), var
             if self.llgp:
-                preds = self.out_layer(xdata, update_precision)
+                preds = self.out_layer(x_antibody, update_precision)
             else:
-                preds = self.out_layer(xdata)
+                preds = self.out_layer(x_antibody)
             return F.softmax(preds)
 
         # Double-check that the objective is correct to avoid weird
@@ -222,7 +232,7 @@ class ByteNetSingleSeq(torch.nn.Module):
             if next(self.parameters()).is_cuda:
                 x = x.cuda()
                 ant = ant.cuda()
-            if self.llgp and get_var and self.objective == "regression":
+            if self.llgp and get_var:
                 preds, var = self.forward(x, ant, get_var = get_var)
                 return preds.cpu().numpy(), var.cpu().numpy()
             return self.forward(x, ant).cpu().numpy()

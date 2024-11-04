@@ -16,3 +16,5 @@ except:
 
 if "torch" in sys.modules:
     from .classic_rffs import VanillaRFFLayer
+    from .protein_ml_models.bytenet_antibody_antigen import ByteNetPairedSeqs
+    from .protein_ml_models.bytenet_antibody_only import ByteNetSingleSeq

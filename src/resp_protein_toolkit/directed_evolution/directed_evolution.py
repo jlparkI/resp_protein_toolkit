@@ -24,12 +24,10 @@ class InSilicoDirectedEvolution():
         Args:
             model_object: An object that has a "predict" method. "predict"
                 must take as input a protein sequence and must return
-                EITHER:
-                    1) two floats, the first of which is a score and the
-                        second of which is the uncertainty on that score OR
-                    2) two 1d numpy arrays, the first of which is scores against
-                        multiple antigens and the second of which is the
-                        uncertainty on those scores.
+                two 1d numpy arrays, the first of which is scores against
+                the antigens and the second of which is the uncertainty on
+                those scores. For example, if there is one antigen, it should
+                return two numpy arrays both with shape[0] = 1.
                 The model_object will usually contain a trained model and
                 a sequence encoder as attributes.
             uncertainty_threshold: The maximum allowed uncertainty
@@ -100,16 +98,18 @@ class InSilicoDirectedEvolution():
                 the model object.
             temperature (float): The current temperature; used to determine
                 acceptance probability.
-            current_scores: Either a float if optimizing against a single
-                target or a 1d numpy array otherwise.
+            current_scores: A 1d numpy array with the same shape[0] as there
+                are targets (e.g. if 1 target, shape[0] = 1).
         """
         new_scores, new_uncertainties = self.model_object.predict("".join(proposed_seq))
-        if isinstance(new_scores, float) and isinstance(new_uncertainties, float):
-            if new_uncertainties > self.uncertainty_threshold:
+        if new_scores.shape[0] == 1 and new_uncertainties.shape[0] == 1:
+            if new_uncertainties[0] > self.uncertainty_threshold:
                 return -1, new_scores, new_uncertainties
+            acceptance_prob = np.exp( min(0, ((new_scores - current_scores) /
+                    temperature) ) )
+            return acceptance_prob, new_scores, new_uncertainties
 
-        elif isinstance(new_scores, np.ndarray) and isinstance(new_uncertainties,
-                np.ndarray):
+        if new_scores.shape[0] > 1:
             if self.uncertainty_threshold.shape[0] != new_uncertainties.shape[0]:
                 raise RuntimeError("The number of uncertainty thresholds must "
                         "match the number of uncertainties for each datapoint.")
@@ -123,10 +123,8 @@ class InSilicoDirectedEvolution():
             acceptance_prob = np.prod(probs)
             return acceptance_prob, new_scores, new_uncertainties
 
-        else:
-            raise RuntimeError("The model object must have a method called 'predict' "
-                    "that when called returns EITHER 1) two floats (the score and "
-                    "the uncertainty) OR 2) two 1d numpy arrays (scores and "
+        raise RuntimeError("The model object must have a method called 'predict' "
+                    "that when called returns two 1d numpy arrays (scores and "
                     "uncertainties for a set of targets).")
 
 
