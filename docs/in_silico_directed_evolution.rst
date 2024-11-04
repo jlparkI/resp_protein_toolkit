@@ -20,15 +20,14 @@ on how the experiment was set up and the sequencing technology -- and so
 tools for this step are not provided here.
 
 There are a broad range of options available for Step 2. Of these, we've found
-CNNs with a last-layer GP (an SNGP model) and approximate Gaussian processes
-`to work very well <https://www.biorxiv.org/content/10.1101/2024.07.30.605700v1>`_,
+CNNs with a last-layer GP (an SNGP model), gradient boosted trees and approximate
+Gaussian processes
+`to work well <https://www.biorxiv.org/content/10.1101/2024.07.30.605700v1>`_,
 although we've used variational Bayesian NNs
 `before as well. <https://www.nature.com/articles/s41467-023-36028-8)>`_ To learn
 how to fit an approximate GP to sequence data, see the
 `xGPR library documentation <https://xgpr.readthedocs.io/en/latest/>`_. We'll
-eventually provide support for training vBNNs and SNGP here, although for now
-to train these models see `this example <https://github.com/Wang-lab-UCSD/RESP>`_
-and `this example <https://github.com/Wang-lab-UCSD/RESP2>`_.
+eventually provide support for training a variety of models here.
 
 Step 4 requires models with high accuracy for predicting immunogenicity / humanness
 and other key developability properties (e.g. stability). For humanness, we've
@@ -52,14 +51,11 @@ we can minimize the number of experimental evaluations needed for success.
 How to run in silico directed evolution
 ==========================================
 First, create a Python class that exposes a function called `predict`. `predict` must take as an
-argument a sequence (as a string), and must return *either*:
+argument a sequence (as a string), and must return:
 
-* Two floats, the first of which is a predicted score and the second of which is the uncertainty
-  on that score. Use this option if there is only one antigen that you are interested in
-  optimizing against.
 * Two 1d numpy arrays of equal size, the first of which is predicted scores against your antigens
-  of interest and the second of which is the uncertainty on each score. Use this option if
-  there are multiple antigens that you would like to optimize against.
+  of interest and the second of which is the uncertainty on each score. If there is only one
+  antigen each array should be shape[0]=1.
 
 You will likely need to set up this class so it wraps / calls a suitable function for encoding
 the protein sequence supplied to `predict` and then feeding the encoded sequence into a
