@@ -23,7 +23,7 @@ pip install . --verbose
 
 ### Usage
 
-For usage and general guidelines, see [the docs]().
+For usage and general guidelines, see [the docs](https://resp-protein-toolkit.readthedocs.io/en/latest/).
 
 
 ### Citations

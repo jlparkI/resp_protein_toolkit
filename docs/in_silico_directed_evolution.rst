@@ -48,8 +48,7 @@ not uncertainty-aware, we can veer into poorly-mapped regions of sequence space 
 not represented in the training data. By restricting our search to high-confidence candidates,
 we can minimize the number of experimental evaluations needed for success.
 
-How to run in silico directed evolution
-==========================================
+**How to run in silico directed evolution**
 First, create a Python class that exposes a function called `predict`. `predict` must take as an
 argument a sequence (as a string), and must return:
 
@@ -129,8 +128,7 @@ tool only has one random seed and stores the sequences associated with its
 completed run, you'll need to create a second object with a new random seed to
 do this.
 
-Details
-==========
+**Details**
 
 Here are the details on how to use the `InSilicoDirectedEvolution` class.
 
