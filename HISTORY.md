@@ -1,2 +1,8 @@
-# Version 0.0.1
+# Version 0.1.0
 Initial release.
+
+# Version 0.1.1
+Bug fixes.
+
+# Version 0.1.2
+Bug fixes.
