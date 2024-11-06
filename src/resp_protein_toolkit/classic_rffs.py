@@ -208,7 +208,7 @@ class VanillaRFFLayer(Module):
                 prob = torch.max(torch.softmax(logits), dim=1)
                 prob_multiplier = prob * (1. - prob)
             else:
-                prob_multiplier = 1.
+                prob_multiplier = torch.tensor([1.]).to(self.output_weights.device)
 
             gp_feature_adjusted = torch.sqrt(prob_multiplier) * rff_mat
             precision_matrix_minibatch = gp_feature_adjusted.T @ gp_feature_adjusted
