@@ -168,20 +168,19 @@ class IntegerProteinEncoder():
 class SubstitutionMatrixEncoder():
     """Encodes input proteins using a substitution matrix."""
 
-    def __init__(self, homology = "90", use_standardized_mat = True):
+    def __init__(self, homology = "90", rep_type = "std"):
         """Class constructor.
 
         Args:
             submat (str): The homology level to use. Currently supported is
                 95, 90, 85, 75, 62.
-            use_standardized_mat (bool): If True, the substitution matrix is
-                used to build a distance matrix, which is then Cholesky-
+            rep_type (str): If 'dist', the substitution matrix is
+                used to build a distance matrix, each row of which is used
+                as a representation. If 'std', the distance matrix is then Cholesky-
                 factored and scaled so that the squared Euclidean distance between
                 the length-21 representation for any two aas (or gaps) will
-                yield the substitution matrix distance. This is useful for
-                approximate kernel machines. If False, the raw row of the
-                substitution matrix is used as a representation. This may be
-                more useful for NNs.
+                yield the substitution matrix distance. If 'raw', the raw row
+                of the substitution matrix is used as a representation.
 
         Raises:
             RuntimeError: An exception is raised if an unsupported option is requested.
@@ -190,10 +189,14 @@ class SubstitutionMatrixEncoder():
         fpath = os.path.abspath(os.path.dirname(__file__))
         os.chdir(os.path.join(fpath, "protein_toolkits"))
 
-        if use_standardized_mat:
+        if rep_type == 'std':
             expected_file = f"PFASUM{homology}_standardized.npy"
-        else:
+        elif rep_type == "dist":
+            expected_file = f"PFASUM{homology}_distmat.npy"
+        elif rep_type == "raw":
             expected_file = f"PFASUM{homology}_raw.npy"
+        else:
+            raise RuntimeError("Rep type must be one of 'std', 'raw', 'dist'.")
 
         if expected_file not in os.listdir():
             raise RuntimeError("Unsupported options requested.")

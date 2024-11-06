@@ -28,6 +28,26 @@ def get_factored_pfasum_pssm(percent_homology, offset = 0.0):
     final_mat = np.linalg.cholesky(dist_mat) / np.sqrt(2)
     return final_mat.clip(min=0), aas
 
+def get_pfasum_distmat(percent_homology, offset = 0.0):
+    """Builds a distance matrix to use as a representation but
+    does not sort it (caller must do this).
+
+    Args:
+        percent_homology (int): The percent homology cutoff. Determines
+            which PFASUM file to use.
+        desired_aa_order (list): A list which indicates
+            the order in which AAs SHOULD appear.
+    """
+    raw_mat, aas = get_raw_pssm_matrix(percent_homology)
+
+    dist_mat = np.zeros(raw_mat.shape)
+    for i in range(raw_mat.shape[0]):
+        for j in range(raw_mat.shape[1]):
+            max_self_sim = np.max([raw_mat[i,i], raw_mat[j,j]])
+            dist_mat[i,j] = (max_self_sim - raw_mat[i,j]) / max_self_sim
+
+    return dist_mat, aas
+
 
 def get_raw_pssm_matrix(percent_homology):
     """Loads the raw pssm matrix into memory without sorting."""
@@ -81,9 +101,25 @@ def generate_all_pssm_loadfiles():
     desired_aa_order = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P',
             'Q', 'R', 'S', 'T', 'V', 'W', 'Y', '-']
 
-    for homology in [95,90,85,75,62]:
+    for homology in [95,90,85,75,62,30,20]:
         output_fname = f"PFASUM{homology}_standardized.npy"
         unsorted_mat, aas = get_factored_pfasum_pssm(homology)
+        final_mat = aa_sort_matrix(unsorted_mat, aas, desired_aa_order)
+        np.save(output_fname, final_mat)
+
+        output_fname = f"PFASUM{homology}_distmat.npy"
+        unsorted_mat, aas = get_pfasum_distmat(homology)
+        final_mat = aa_sort_matrix(unsorted_mat, aas, desired_aa_order)
+        np.save(output_fname, final_mat)
+
+        output_fname = f"PFASUM{homology}_raw.npy"
+        unsorted_mat, aas = get_raw_pssm_matrix(homology)
+        final_mat = aa_sort_matrix(unsorted_mat, aas, desired_aa_order)
+        np.save(output_fname, final_mat)
+
+    for homology in [11]:
+        output_fname = f"PFASUM{homology}_distmat.npy"
+        unsorted_mat, aas = get_pfasum_distmat(homology)
         final_mat = aa_sort_matrix(unsorted_mat, aas, desired_aa_order)
         np.save(output_fname, final_mat)
 
