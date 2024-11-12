@@ -34,12 +34,13 @@ class InSilicoDirectedEvolution():
                 on a prediction before a sequence is rejected. This should be an
                 array of the same length as the number of antigens if there are
                 multiple antigens OR a float if there is only one. This value is
-                dataset- and model-dependent. We recommend using your trained
-                model to calculate uncertainty for the training set datapoints
-                then taking the 95th percentile and using this as the threshold
-                (only predictions with uncertainty < 95% of the training set
-                are accepted), but this is a heuristic -- it is possible to
-                adopt another procedure if desired.
+                dataset- and model-dependent. For regression problems, you may
+                often be able to set this threshold based on prior knowledge (for
+                example, if you are training on Kd values and predicting log Kd,
+                you likely know how wide of a confidence interval you can tolerate
+                before the prediction is not useful). You can also set this value
+                using your test set (e.g. set it to the 95th percentile of the
+                uncertainty scores for the test set or some similar heuristic).
             prob_distro: Either None or a 2d numpy array. If None, all possible
                 mutations are assumed to have equal probability. If a numpy
                 array, its shape[0] must be of the same length as the sequence

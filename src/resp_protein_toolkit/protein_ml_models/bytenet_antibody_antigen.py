@@ -30,8 +30,9 @@ class ByteNetPairedSeqs(torch.nn.Module):
         hidden_dim (int): The dimensions used inside the model.
         n_layers (int): The number of ByteNet blocks to use.
         kernel_size (int): The kernel width for ByteNet blocks.
-        dil_factor (int): Used for calculating dilation factor, which increases on
-            subsequent layers.
+        dil_factor (int): Used for calculating dilation factor, which increases by
+            this factor on each subsequent layer. For short sequence inputs, use 1.
+            For long sequences, 2 (or even 3) may be more appropriate.
         rep_dim (int): At the end of the ByteNet blocks, the mean is taken across
             the tokens in each sequence to generate a representation. rep_dim
             determines the size of that representation.
