@@ -158,10 +158,18 @@ class ByteNetSingleSeq(torch.nn.Module):
             "multiclass".
         num_predicted_categories (int): The number of categories (i.e. possible values
             for y in output). Ignored unless objective is "multiclass".
+        gp_cov_momentum (float): A "discount factor" used to update a moving average
+            for the updates to the covariance matrix when llgp is True. 0.999 is a
+            reasonable default if the number of steps per epoch is large, otherwise
+            you may want to experiment with smaller values. If you set this to < 0
+            (e.g. to -1), the precision matrix will be generated in a single epoch
+            without any momentum. If llgp is False (model is not uncertainty aware),
+            there is no covariance matrix and this argument is ignored.
     """
     def __init__(self, input_dim, hidden_dim, n_layers, kernel_size, dil_factor,
                 rep_dim = 100, pool_type = "max", dropout = 0.0, slim = False,
-                llgp = False, objective = "regression", num_predicted_categories = 1):
+                llgp = False, objective = "regression", num_predicted_categories = 1,
+                gp_cov_momentum = 0.999):
         super().__init__()
         torch.manual_seed(123)
         torch.backends.cudnn.deterministic = True
@@ -216,7 +224,7 @@ class ByteNetSingleSeq(torch.nn.Module):
 
         if llgp:
             self.out_layer = VanillaRFFLayer(in_features = rep_dim,
-                        RFFs = 1024, out_targets = 1, gp_cov_momentum = 0.999,
+                        RFFs = 1024, out_targets = 1, gp_cov_momentum = gp_cov_momentum,
                         gp_ridge_penalty = 1e-3, likelihood = likelihood,
                         random_seed = 123)
         else:
@@ -235,8 +243,12 @@ class ByteNetSingleSeq(torch.nn.Module):
         """
         Args:
             x_antibody (N, L, in_channels): -- the antibody sequence data
-            update_precision (bool): Should be True during training, False
-                otherwise.
+            update_precision (bool): If you want to generate the covariance matrix
+                during the last epoch only (i.e. you set gp_cov_momentum to < 0
+                when creating this model), set this to True during the last epoch
+                only. If you want to generate the covariance matrix over the course
+                of training (i.e. gp_cov_momentum is > 0 and < 1), set this to True
+                throughout training. This should always be False during inference.
             get_var (bool): If True, return estimated variance on predictions.
                 Only available if 'llgp' in class constructor is True AND objective
                 is regression. Otherwise, this option can still be passed but
