@@ -52,11 +52,21 @@ class ByteNetPairedSeqs(torch.nn.Module):
             (e.g. to -1), the precision matrix will be generated in a single epoch
             without any momentum. If llgp is False (model is not uncertainty aware),
             there is no covariance matrix and this argument is ignored.
+        gp_ridge_penalty (float): The ridge penalty for the last layer GP. Performance
+            is not usually very sensitive to this although in some cases experimenting
+            with it may improve performance, and it can affect calibration. It should
+            not be set to zero since it is important for numerical stability for it to
+            be > 0. The default is 1e-3.
+        gp_amplitude (float): The kernel amplitude for the last layer Gaussian process.
+            This is the inverse of the lengthscale. Performance is not generally
+            very sensitive to the selected value for this hyperparameter,
+            although it may affect calibration. Defaults to 1.
     """
     def __init__(self, input_dim, hidden_dim, n_layers, kernel_size, dil_factor,
                 rep_dim = 100, dropout = 0.0, slim = False, llgp = False,
                 antigen_dim = None, objective = "regression",
-                num_predicted_categories = 1, gp_cov_momentum = 0.999):
+                num_predicted_categories = 1, gp_cov_momentum = 0.999,
+                gp_ridge_penalty=1e-3, gp_amplitude=1.):
         super().__init__()
         torch.manual_seed(123)
         torch.backends.cudnn.deterministic = True
@@ -119,8 +129,8 @@ class ByteNetPairedSeqs(torch.nn.Module):
         if llgp:
             self.out_layer = VanillaRFFLayer(in_features = 2 * rep_dim,
                         RFFs = 1024, out_targets = 1, gp_cov_momentum = gp_cov_momentum,
-                        gp_ridge_penalty = 1e-3, likelihood = likelihood,
-                        random_seed = 123)
+                        gp_ridge_penalty = gp_ridge_penalty, likelihood = likelihood,
+                        random_seed = 123, amplitude = gp_amplitude)
         else:
             if use_spectral_norm:
                 self.out_layer = SpectralNorm(torch.nn.Linear(2 * rep_dim, nclasses))
