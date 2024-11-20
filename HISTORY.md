@@ -1,3 +1,11 @@
+# Version 0.1.7
+Added liberal / conservative approach options for
+the ISDE search tool.
+
+# Version 0.1.6
+Added amplitude and ridge penalty as hyperparameter
+options for the bytenet model.
+
 # Version 0.1.5
 Allow user to specify gp_cov_momentum when
 creating a bytenet model.

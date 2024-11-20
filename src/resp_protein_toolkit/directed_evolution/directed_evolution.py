@@ -18,7 +18,8 @@ import numpy as np
 class InSilicoDirectedEvolution():
 
     def __init__(self, model_object, uncertainty_threshold,
-            prob_distro = None, seed:int = 123):
+            prob_distro = None, seed:int = 123,
+            approach = "liberal"):
         """Class constructor.
 
         Args:
@@ -47,11 +48,18 @@ class InSilicoDirectedEvolution():
                 and should give the probability of each possible mutation at
                 each position.
             seed (int): The seed to the random number generator.
+            approach (str): One of "liberal", "conservative". If 'liberal',
+                the probability that a sequence is accepted is determined by
+                the best score improvement against any of the targets. If
+                'conservative', the acceptance probability is determined by
+                the worst score improvement against any target. Ignored if
+                there is only one target.
         """
         self.model_object = model_object
         self.prob_distro = prob_distro
         self.seed = seed
         self.uncertainty_threshold = uncertainty_threshold
+        self.approach = approach
 
         # Amino acids in alphabetical order.
         self.aas = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P',
@@ -119,9 +127,12 @@ class InSilicoDirectedEvolution():
                 if new_uncertainty > threshold:
                     return -1, new_scores, new_uncertainties
 
-            probs = np.exp( ((new_scores - current_scores) /
-                temperature).max().clip(max=0) )
-            acceptance_prob = np.prod(probs)
+            if self.approach == "liberal":
+                acceptance_prob = np.exp( ((new_scores - current_scores) /
+                    temperature).max().clip(max=0) )
+            else:
+                acceptance_prob = np.exp( ((new_scores - current_scores) /
+                    temperature).min().clip(max=0) )
             return acceptance_prob, new_scores, new_uncertainties
 
         raise RuntimeError("The model object must have a method called 'predict' "
