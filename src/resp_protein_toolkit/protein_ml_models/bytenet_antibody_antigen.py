@@ -128,7 +128,7 @@ class ByteNetPairedSeqs(torch.nn.Module):
 
         if llgp:
             self.out_layer = VanillaRFFLayer(in_features = 2 * rep_dim,
-                        RFFs = 1024, out_targets = 1, gp_cov_momentum = gp_cov_momentum,
+                        RFFs = 1024, out_targets = nclasses, gp_cov_momentum = gp_cov_momentum,
                         gp_ridge_penalty = gp_ridge_penalty, likelihood = likelihood,
                         random_seed = 123, amplitude = gp_amplitude)
         else:

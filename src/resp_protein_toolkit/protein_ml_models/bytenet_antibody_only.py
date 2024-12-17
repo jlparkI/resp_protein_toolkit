@@ -233,9 +233,12 @@ class ByteNetSingleSeq(torch.nn.Module):
 
         if llgp:
             self.out_layer = VanillaRFFLayer(in_features = rep_dim,
-                        RFFs = 1024, out_targets = 1, gp_cov_momentum = gp_cov_momentum,
-                        gp_ridge_penalty = gp_ridge_penalty, likelihood = likelihood,
-                        random_seed = 123, amplitude = gp_amplitude)
+                        RFFs = 1024, out_targets = nclasses,
+                        gp_cov_momentum = gp_cov_momentum,
+                        gp_ridge_penalty = gp_ridge_penalty,
+                        likelihood = likelihood,
+                        random_seed = 123,
+                        amplitude = gp_amplitude)
         else:
             if use_spectral_norm:
                 self.out_layer = SpectralNorm(torch.nn.Linear(rep_dim, nclasses))
