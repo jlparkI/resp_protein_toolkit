@@ -208,12 +208,12 @@ class ByteNetPairedSeqs(torch.nn.Module):
         if self.objective == "multiclass":
             if self.llgp and get_var:
                 preds, var = self.out_layer(x_antibody, get_var = get_var)
-                return F.softmax(preds), var
+                return F.softmax(preds, dim=1), var
             if self.llgp:
                 preds = self.out_layer(x_antibody, update_precision)
             else:
                 preds = self.out_layer(x_antibody)
-            return F.softmax(preds)
+            return F.softmax(preds, dim=1)
 
         # Double-check that the objective is correct to avoid weird
         # errors...

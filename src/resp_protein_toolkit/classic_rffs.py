@@ -3,6 +3,7 @@ sufficient if the size of the latent representation is not large."""
 import math
 
 import torch
+from torch.nn import functional as F
 from torch import Tensor
 from torch.nn.parameter import Parameter
 from torch.nn import Module
@@ -205,7 +206,7 @@ class VanillaRFFLayer(Module):
                 prob = torch.sigmoid(logits)
                 prob_multiplier = prob * (1. - prob)
             elif self.likelihood == 'multiclass':
-                prob = torch.max(torch.softmax(logits), dim=1)
+                prob = F.softmax(logits, dim=1).max(dim=1)[0].unsqueeze(1)
                 prob_multiplier = prob * (1. - prob)
             else:
                 prob_multiplier = torch.tensor([1.]).to(self.output_weights.device)
