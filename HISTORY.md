@@ -1,3 +1,7 @@
+# Version 0.1.9
+Added option to change the number of RFFs for
+GP approximation in the model final layer.
+
 # Version 0.1.7
 Added liberal / conservative approach options for
 the ISDE search tool.

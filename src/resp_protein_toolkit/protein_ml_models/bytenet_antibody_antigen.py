@@ -61,12 +61,17 @@ class ByteNetPairedSeqs(torch.nn.Module):
             This is the inverse of the lengthscale. Performance is not generally
             very sensitive to the selected value for this hyperparameter,
             although it may affect calibration. Defaults to 1.
+        num_rffs (int): The number of random Fourier features used to approximate a GP
+            in the final model layer. Only used if llgp is set to True; otherwise it is
+            ignored. A larger number of RFFs means a more accurate kernel approximation.
+            Default is 1024 which is usually fine for most purposes.
     """
     def __init__(self, input_dim, hidden_dim, n_layers, kernel_size, dil_factor,
                 rep_dim = 100, dropout = 0.0, slim = False, llgp = False,
                 antigen_dim = None, objective = "regression",
                 num_predicted_categories = 1, gp_cov_momentum = 0.999,
-                gp_ridge_penalty=1e-3, gp_amplitude=1.):
+                gp_ridge_penalty=1e-3, gp_amplitude=1.,
+                num_rffs = 1024):
         super().__init__()
         torch.manual_seed(123)
         torch.backends.cudnn.deterministic = True
@@ -128,7 +133,7 @@ class ByteNetPairedSeqs(torch.nn.Module):
 
         if llgp:
             self.out_layer = VanillaRFFLayer(in_features = 2 * rep_dim,
-                        RFFs = 1024, out_targets = nclasses, gp_cov_momentum = gp_cov_momentum,
+                        RFFs = num_rffs, out_targets = nclasses, gp_cov_momentum = gp_cov_momentum,
                         gp_ridge_penalty = gp_ridge_penalty, likelihood = likelihood,
                         random_seed = 123, amplitude = gp_amplitude)
         else:
