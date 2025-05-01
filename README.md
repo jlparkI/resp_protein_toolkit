@@ -10,16 +10,6 @@ Communications).](https://www.nature.com/articles/s41467-023-36028-8)
 For an example of the full RESP pipeline, including uncertainty-aware
 model training, please [see this repo.](https://github.com/Wang-lab-UCSD/RESP)
 
-### Installation
-```
-pip install resp_protein_toolkit
-```
-Alternatively, to install from github, clone this repo, then
-from inside the resulting directory run:
-```
-pip install . --verbose
-```
-
 
 ### Usage
 
