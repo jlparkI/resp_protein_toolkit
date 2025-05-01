@@ -1,3 +1,6 @@
+# Version 0.2.1
+Added ordinal regression.
+
 # Version 0.1.9
 Added option to change the number of RFFs for
 GP approximation in the model final layer.

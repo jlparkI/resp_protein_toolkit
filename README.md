@@ -1,9 +1,3 @@
-# NOTE
-
-This is a deprecated pre-release version of resp_protein_toolkit.
-Do not use this for anything important. See the RESP2 repository
-for a more updated version.
-
 # resp_protein_toolkit
 
 A toolkit designed to perform some common tasks in protein
