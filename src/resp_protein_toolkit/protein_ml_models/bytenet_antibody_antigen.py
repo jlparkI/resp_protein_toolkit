@@ -254,6 +254,87 @@ class ByteNetPairedSeqs(torch.nn.Module):
 
 
 
+    def _ordinal_forward(self, x_antibody, get_var = False):
+        """Returns the latent score (for ordinal regression only; if any other
+        objective has been specified a RuntimeError will be raised).
+
+        Args:
+            x_antibody (N, L, in_channels): -- the antibody sequence data
+            get_var (bool): If True, return estimated variance on predictions.
+                Only available if 'llgp' in class constructor is True AND objective
+                is regression. Otherwise, this option can still be passed but
+                will be ignored.
+
+        Returns:
+            scores (np.ndarray): An array of shape (N), where this is the
+                latent score for each datapoint.
+            var (np.ndarray): Only returned if get_var is True, llgp in
+                the class constructor is True. If returned, is of shape (N).
+        """
+        x_antibody = self.adjuster(x_antibody)
+        if self.antigen_adjuster is not None:
+            x_antigen = self.antigen_adjuster(x_ant)
+        else:
+            x_antigen = self.adjuster(x_ant)
+
+        for layer in self.antibody_layers:
+            x_antibody = layer(x_antibody)
+            if self.dropout > 0.0 and self.training:
+                x_antibody = F.dropout(x_antibody, self.dropout)
+        for layer in self.antigen_layers:
+            x_antigen = layer(x_antigen)
+            if self.dropout > 0.0 and self.training:
+                x_antigen = F.dropout(x_antigen, self.dropout)
+
+        x_antibody = self.down_adjuster(x_antibody)
+        x_antigen = self.down_adjuster(x_antigen)
+        xdata = torch.cat([x_antibody, x_antigen], dim=2)
+        xdata = torch.mean(xdata, dim=1)
+
+        if self.objective == "ordinal":
+            if self.llgp and get_var:
+                preds, var = self.out_layer(x_antibody, get_var = get_var)
+                if len(preds.shape) == 1:
+                    preds = preds.unsqueeze(1)
+                return preds, var
+            preds = self.out_layer(x_antibody)
+
+            if len(preds.shape) == 1:
+                preds = preds.unsqueeze(1)
+            return preds
+        
+        # Double-check that the objective is correct to avoid weird
+        # errors...
+        raise RuntimeError("Model was initialized with an invalid task / objective.")
+
+
+
+    def get_ordinal_score(self, x_antibody, get_var = False):
+        """Returns the latent score (for ordinal regression only; if any other
+        objective has been specified a RuntimeError will be raised).
+
+        Args:
+            x_antibody (N, L, in_channels): -- the antibody sequence data
+            get_var (bool): If True, return estimated variance on predictions.
+                Only available if 'llgp' in class constructor is True AND objective
+                is regression. Otherwise, this option can still be passed but
+                will be ignored.
+
+        Returns:
+            scores (np.ndarray): An array of shape (N), where this is the
+                latent score for each datapoint.
+            var (np.ndarray): Only returned if get_var is True, llgp in
+                the class constructor is True. If returned, is of shape (N).
+        """
+        with torch.no_grad():
+            self.eval()
+            x = torch.from_numpy(x).float()
+            if next(self.parameters()).is_cuda:
+                x = x.cuda()
+            if self.llgp and get_var:
+                preds, var = self._ordinal_forward(x, get_var = get_var)
+                return preds.cpu().numpy(), var.cpu().numpy()
+            return self._ordinal_forward(x).cpu().numpy()
 
 
     def predict(self, x, ant, get_var = False):
