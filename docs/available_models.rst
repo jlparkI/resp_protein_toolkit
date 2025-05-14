@@ -14,11 +14,11 @@ Here are the details:
 
 .. autoclass:: resp_protein_toolkit.ByteNetSingleSeq
    :special-members: __init__
-   :members: forward, predict
+   :members: forward, predict, get_ordinal_score
 
 .. autoclass:: resp_protein_toolkit.ByteNetPairedSeqs
    :special-members: __init__
-   :members: forward, predict
+   :members: forward, predict, get_ordinal_score
 
 
 To train these models, it's typical to pass one of them together with
