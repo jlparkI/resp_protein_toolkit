@@ -404,12 +404,12 @@ class ByteNetSingleSeq(torch.nn.Module):
 
 
 
-    def get_ordinal_score(self, x_antibody, get_var = False):
+    def get_ordinal_score(self, x, get_var = False):
         """Returns the latent score (for ordinal regression only; if any other
         objective has been specified a RuntimeError will be raised).
 
         Args:
-            x_antibody (N, L, in_channels): -- the antibody sequence data
+            x (N, L, in_channels): -- the antibody sequence data
             get_var (bool): If True, return estimated variance on predictions.
                 Only available if 'llgp' in class constructor is True AND objective
                 is regression. Otherwise, this option can still be passed but
