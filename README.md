@@ -4,16 +4,15 @@ A toolkit designed to perform some common tasks in protein
 engineering, especially encoding protein sequences (in various
 formats), assisting in fitting uncertainty-aware models to
 data, and using a trained model to search for improved candidates
-using the RESP pipeline from [Parkinson et al. 2023 (Nature
-Communications).](https://www.nature.com/articles/s41467-023-36028-8)
+using a simulated annealing "in silico" directed evolution algorithm
+from [Parkinson et al. 2023 (Nature Communications).](https://www.nature.com/articles/s41467-023-36028-8)
 
 ### Installation
 
-Note that this package is currently closed-source and is freely available
-for non-commercial use only by academic or nonprofit institutions.
-If you are interested in installing and using this package,
-please [contact us.](https://mapbioscience.com/contact/)
-
+To install this, run:
+```
+pip install resp_protein_toolkit
+```
 
 ### Usage
 
