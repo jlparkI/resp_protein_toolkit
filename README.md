@@ -14,6 +14,10 @@ To install this, run:
 pip install resp_protein_toolkit
 ```
 
+Numpy is a required dependency. PyTorch is not *required* but will be
+necessary to use the models contained in the package so is strongly
+recommended.
+
 ### Usage
 
 For usage and general guidelines, see [the docs](https://resp-protein-toolkit.readthedocs.io/en/latest/).
