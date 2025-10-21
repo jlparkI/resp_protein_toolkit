@@ -4,8 +4,9 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "resp_protein_toolkit"
-version = "0.2.2"
+version = "0.2.3"
 description = "Basic toolkit for common protein engineering tasks"
+dependencies ["numpy"]
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
