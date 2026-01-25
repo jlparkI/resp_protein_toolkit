@@ -1,3 +1,5 @@
+include(CheckLanguage)
+
 set(CMAKE_VERBOSE_MAKEFILE on)
 cmake_minimum_required(VERSION 3.18)
 if (NOT SKBUILD)
@@ -6,7 +8,7 @@ if (NOT SKBUILD)
   it directly will almost certainly not produce the desired result.")
 endif()
 
-
+project(${SKBUILD_PROJECT_NAME} LANGUAGES C CXX)
 
 find_package(Python 3.9 COMPONENTS Interpreter Development.Module REQUIRED)
 
@@ -15,13 +17,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 find_package(nanobind CONFIG REQUIRED)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 nanobind_add_module(
   resp_protein_toolkit_ext
 
   # Target the stable ABI for Python 3.12+, which reduces
   # the number of binary wheels that must be built. This
   # does nothing on older Python versions
-  STABLE_ABI
+  #STABLE_ABI
 
   NB_STATIC
 
